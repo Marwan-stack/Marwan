@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A company employee, office boy, or admin.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["employee", "office_boy", "admin"] },
+        "dailyOrderCount": { "type": "integer", "description": "Number of orders today" },
+        "weeklyOrderCount": { "type": "integer", "description": "Number of orders this week" },
+        "lastOrderTimestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A drink or task request.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "drinkType": { "type": "string" },
+        "sugarLevel": { "type": "string" },
+        "milk": { "type": "boolean" },
+        "notes": { "type": "string" },
+        "priority": { "type": "string", "enum": ["normal", "urgent"] },
+        "status": { "type": "string", "enum": ["pending", "accepted", "in_progress", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "acceptedAt": { "type": "string", "format": "date-time" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "slaDeadline": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "drinkType", "status", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "A record of actions taken in the system.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "details": { "type": "string" }
+      },
+      "required": ["action", "userId", "timestamp"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global system configuration.",
+      "type": "object",
+      "properties": {
+        "dailyLimit": { "type": "integer" },
+        "weeklyLimit": { "type": "integer" },
+        "slaMinutes": { "type": "integer" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and order counters."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Real-time drink and task requests."
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Immutable history of system actions."
+    },
+    "/settings/global": {
+      "schema": "Settings",
+      "description": "Global governance rules."
+    }
+  }
+}

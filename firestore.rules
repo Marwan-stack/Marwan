@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, displayName, role, dailyOrderCount, weeklyOrderCount, lastOrderTimestamp
+    //
+    // Collection: orders
+    // Fields: userId, userName, drinkType, sugarLevel, milk, notes, priority, status, createdAt, slaDeadline
+    //
+    // Collection: audit_logs
+    // Fields: action, userId, userName, timestamp, details
+    //
+    // Collection: settings
+    // Fields: dailyLimit, weeklyLimit, slaMinutes
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "marwanmohssen28@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isOfficeBoy() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'office_boy';
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.role in ['employee', 'office_boy', 'admin'];
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['userId', 'drinkType', 'status', 'createdAt']) &&
+             data.status in ['pending', 'accepted', 'in_progress', 'completed', 'cancelled'] &&
+             data.priority in ['normal', 'urgent'];
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'employee';
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data) && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (isAdmin() || isOfficeBoy() || (isOwner(resource.data.userId) && resource.data.status == 'pending'));
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+    }
+
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}
